@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.env
+*.sqlite
+database.sqlite
+coverage
+.git
+.gitignore
+tests
+*.md
