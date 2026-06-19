@@ -31,7 +31,7 @@ if (isTest) {
   if (!databaseUrl) {
     console.error('❌ DATABASE_URL environment variable is required.');
     console.error('   Set it in your .env file. Get it from your Supabase project settings.');
-    console.error('   Format: postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres');
+    console.error('   Format: <your-supabase-connection-string>');
     process.exit(1);
   }
 

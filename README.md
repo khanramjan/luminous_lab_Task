@@ -86,7 +86,7 @@ cp .env.example .env
 
 Edit `.env` and fill in:
 - `DATABASE_URL` — Your Supabase PostgreSQL connection string  
-  Format: `postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres`
+  Format: `<your-supabase-connection-string>`
 - `JWT_SECRET` — Secret for access tokens (change in production)
 - `JWT_REFRESH_SECRET` — Separate secret for refresh tokens (change in production)
 
