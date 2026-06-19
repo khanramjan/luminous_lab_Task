@@ -50,6 +50,13 @@ module.exports = (sequelize) => {
     },
   }, {
     tableName: 'tasks',
+    indexes: [
+      { fields: ['assigneeId'] },
+      { fields: ['projectId'] },
+      { fields: ['status'] },
+      { fields: ['priority'] },
+      { fields: ['dueDate'] },
+    ],
   });
 
   return Task;

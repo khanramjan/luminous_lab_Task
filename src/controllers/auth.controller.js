@@ -22,7 +22,7 @@ function generateTokens(user) {
     expiresIn: jwtConfig.accessExpiry,
   });
 
-  const refreshToken = jwt.sign({ id: user.id }, jwtConfig.secret, {
+  const refreshToken = jwt.sign({ id: user.id }, jwtConfig.refreshSecret, {
     expiresIn: jwtConfig.refreshExpiry,
   });
 
@@ -35,7 +35,11 @@ function generateTokens(user) {
  */
 const register = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
+
+    // Public registration always assigns 'member' role.
+    // Admins can promote users via PATCH /api/users/:id
+    const role = 'member';
 
     // Check for existing email
     const existingUser = await User.findOne({ where: { email } });
@@ -111,7 +115,7 @@ const refresh = async (req, res, next) => {
     // Verify refresh token
     let decoded;
     try {
-      decoded = jwt.verify(refreshToken, jwtConfig.secret);
+      decoded = jwt.verify(refreshToken, jwtConfig.refreshSecret);
     } catch (err) {
       throw ApiError.unauthorized('Invalid or expired refresh token');
     }

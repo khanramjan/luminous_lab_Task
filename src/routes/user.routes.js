@@ -16,15 +16,29 @@ const authorize = require('../middleware/authorize');
 const validate = require('../middleware/validate');
 const { updateUserSchema, userIdParamSchema } = require('../validators/user.validator');
 
-// All user routes require admin role
-router.use(authenticate, authorize('admin'));
-
 /**
  * @swagger
  * tags:
  *   name: Users
- *   description: User management (admin only)
+ *   description: User management
  */
+
+/**
+ * @swagger
+ * /api/users/me:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get current user's profile (any authenticated user)
+ *     responses:
+ *       200:
+ *         description: Profile retrieved successfully
+ *       401:
+ *         description: Not authenticated
+ */
+router.get('/me', authenticate, userController.getMe);
+
+// All remaining user routes require admin role
+router.use(authenticate, authorize('admin'));
 
 /**
  * @swagger

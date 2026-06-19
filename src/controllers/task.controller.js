@@ -14,7 +14,7 @@
  */
 
 const { Op } = require('sequelize');
-const { Task, User, Project, AuditLog } = require('../models');
+const { Task, User, Project, AuditLog, sequelize } = require('../models');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
@@ -100,11 +100,12 @@ const listTasks = async (req, res, next) => {
     if (assigneeId) where.assigneeId = assigneeId;
     if (projectId) where.projectId = projectId;
 
-    // Search in title and description
+    // Search in title and description (iLike for case-insensitive PostgreSQL, like for SQLite)
     if (search) {
+      const likeOp = sequelize.getDialect() === 'postgres' ? Op.iLike : Op.like;
       where[Op.or] = [
-        { title: { [Op.like]: `%${search}%` } },
-        { description: { [Op.like]: `%${search}%` } },
+        { title: { [likeOp]: `%${search}%` } },
+        { description: { [likeOp]: `%${search}%` } },
       ];
     }
 

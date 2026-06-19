@@ -82,8 +82,13 @@ npm install
 ### 3. Configure environment
 ```bash
 cp .env.example .env
-# Edit .env with your JWT secret (required for production)
 ```
+
+Edit `.env` and fill in:
+- `DATABASE_URL` — Your Supabase PostgreSQL connection string  
+  Format: `postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres`
+- `JWT_SECRET` — Secret for access tokens (change in production)
+- `JWT_REFRESH_SECRET` — Separate secret for refresh tokens (change in production)
 
 ### 4. Start the server
 ```bash
@@ -131,7 +136,8 @@ npm run migrate -- --fresh
 |----------|---------|-------------|
 | `NODE_ENV` | `development` | Environment mode |
 | `PORT` | `3000` | Server port |
-| `JWT_SECRET` | `default-dev-secret-change-me` | JWT signing secret (⚠️ change in production) |
+| `JWT_SECRET` | `default-dev-secret-change-me` | Access token signing secret (⚠️ change in production) |
+| `JWT_REFRESH_SECRET` | Falls back to `JWT_SECRET` | Refresh token signing secret (⚠️ change in production) |
 | `JWT_ACCESS_EXPIRY` | `15m` | Access token expiry |
 | `JWT_REFRESH_EXPIRY` | `7d` | Refresh token expiry |
 | `DATABASE_URL` | — | Supabase PostgreSQL connection string (required) |
@@ -143,7 +149,7 @@ npm run migrate -- --fresh
 ### Auth (`/api/auth`)
 | Method | Endpoint | Access | Description |
 |--------|----------|--------|-------------|
-| POST | `/register` | Public | Register new user |
+| POST | `/register` | Public | Register new user (always assigned `member` role) |
 | POST | `/login` | Public | Login and get tokens |
 | POST | `/refresh` | Public | Refresh access token |
 | POST | `/logout` | Auth | Invalidate refresh token |
@@ -151,9 +157,10 @@ npm run migrate -- --fresh
 ### Users (`/api/users`)
 | Method | Endpoint | Access | Description |
 |--------|----------|--------|-------------|
+| GET | `/me` | Auth | Get current user's profile |
 | GET | `/` | Admin | List all users |
 | GET | `/:id` | Admin | Get user by ID |
-| PATCH | `/:id` | Admin | Update user |
+| PATCH | `/:id` | Admin | Update user (including role promotion) |
 | DELETE | `/:id` | Admin | Soft delete user |
 
 ### Projects (`/api/projects`)
@@ -266,10 +273,12 @@ curl -X POST http://localhost:3000/api/auth/register \
   -d '{
     "name": "John Doe",
     "email": "john@example.com",
-    "password": "secret123",
-    "role": "admin"
+    "password": "SecurePass123!"
   }'
 ```
+
+> **Note:** Registration always assigns the `member` role. Admins can promote users via `PATCH /api/users/:id`.  
+> Password must be 8+ characters with uppercase, lowercase, digit, and special character.
 
 ### Login
 ```bash
@@ -360,8 +369,10 @@ npm run test:coverage
 ### Test Suites
 | Suite | File | Description |
 |-------|------|-------------|
-| Auth | `tests/auth.test.js` | Registration, login, token refresh, protected routes, logout |
+| Auth | `tests/auth.test.js` | Registration, login, token refresh, protected routes, /me, logout, password complexity, role restriction |
 | Tasks | `tests/task.test.js` | CRUD, RBAC, filtering, sorting, pagination, soft delete |
+| Projects | `tests/project.test.js` | CRUD, RBAC, validation, pagination, soft delete |
+| Comments | `tests/comment.test.js` | CRUD, RBAC, member access restrictions, author-only edit/delete |
 | Audit | `tests/audit.test.js` | Status/priority/assignee change logging, comment activity, access control |
 
 ---

@@ -10,6 +10,26 @@ const ApiResponse = require('../utils/ApiResponse');
 const { parsePagination, buildPaginationMeta } = require('../utils/pagination');
 
 /**
+ * GET /api/users/me
+ * Get the currently authenticated user's profile.
+ */
+const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: { exclude: ['password', 'refreshToken'] },
+    });
+
+    if (!user) {
+      throw ApiError.notFound('User');
+    }
+
+    return ApiResponse.success(res, user.toSafeJSON(), 'Profile retrieved successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/users
  * List all users with pagination (admin only).
  */
@@ -98,6 +118,7 @@ const deleteUser = async (req, res, next) => {
 };
 
 module.exports = {
+  getMe,
   listUsers,
   getUser,
   updateUser,

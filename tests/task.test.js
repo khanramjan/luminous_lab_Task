@@ -7,14 +7,16 @@
  * - Filtering by status and priority
  * - Pagination response structure
  * - Members can only view/update assigned tasks
+ * - Soft delete behavior
  */
 
 const request = require('supertest');
 const app = require('../src/app');
-const { sequelize } = require('../src/models');
+const { sequelize, User } = require('../src/models');
 
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-secret-key';
+process.env.JWT_REFRESH_SECRET = 'test-refresh-secret-key';
 
 let adminToken, managerToken, memberToken;
 let adminId, managerId, memberId;
@@ -26,21 +28,33 @@ beforeAll(async () => {
   // Register admin
   const adminRes = await request(app)
     .post('/api/auth/register')
-    .send({ name: 'Admin', email: 'admin@test.com', password: 'password123', role: 'admin' });
-  adminToken = adminRes.body.data.accessToken;
+    .send({ name: 'Admin', email: 'admin@test.com', password: 'Password123!' });
   adminId = adminRes.body.data.user.id;
+
+  // Promote to admin
+  await User.update({ role: 'admin' }, { where: { id: adminId } });
+  const adminLogin = await request(app)
+    .post('/api/auth/login')
+    .send({ email: 'admin@test.com', password: 'Password123!' });
+  adminToken = adminLogin.body.data.accessToken;
 
   // Register manager
   const managerRes = await request(app)
     .post('/api/auth/register')
-    .send({ name: 'Manager', email: 'manager@test.com', password: 'password123', role: 'manager' });
-  managerToken = managerRes.body.data.accessToken;
+    .send({ name: 'Manager', email: 'manager@test.com', password: 'Password123!' });
   managerId = managerRes.body.data.user.id;
+
+  // Promote to manager
+  await User.update({ role: 'manager' }, { where: { id: managerId } });
+  const managerLogin = await request(app)
+    .post('/api/auth/login')
+    .send({ email: 'manager@test.com', password: 'Password123!' });
+  managerToken = managerLogin.body.data.accessToken;
 
   // Register member
   const memberRes = await request(app)
     .post('/api/auth/register')
-    .send({ name: 'Member', email: 'member@test.com', password: 'password123', role: 'member' });
+    .send({ name: 'Member', email: 'member@test.com', password: 'Password123!' });
   memberToken = memberRes.body.data.accessToken;
   memberId = memberRes.body.data.user.id;
 
