@@ -35,6 +35,7 @@ A production-grade **Node.js REST API** for internal task tracking, built with E
 - ✅ **Centralized Error Handling** with consistent JSON responses
 - ✅ **Request Validation** using Joi schemas
 - ✅ **Rate Limiting** on auth endpoints (brute-force protection)
+- ✅ **Performance Optimizations** via Redis Caching and Database Compound Indexes
 
 ### Bonus
 - ✅ **Refresh Token Support** with secure rotation
@@ -52,6 +53,7 @@ A production-grade **Node.js REST API** for internal task tracking, built with E
 | Runtime | Node.js 18+ |
 | Framework | Express.js 4 |
 | Database | Supabase PostgreSQL via Sequelize ORM |
+| Caching Layer | Redis (via `redis` package) |
 | Authentication | JWT (jsonwebtoken) |
 | Password Hashing | bcryptjs |
 | Validation | Joi |
@@ -89,6 +91,7 @@ Edit `.env` and fill in:
   Format: `<your-supabase-connection-string>`
 - `JWT_SECRET` — Secret for access tokens (change in production)
 - `JWT_REFRESH_SECRET` — Separate secret for refresh tokens (change in production)
+- `REDIS_URL` — Connection string for your Redis instance (e.g., Upstash)
 
 ### 4. Start the server
 ```bash
@@ -117,6 +120,7 @@ The project includes proper versioned migration files in `migrations/`:
 | `03-create-tasks.js` | `tasks` | Tasks with status/priority enums, indexes |
 | `04-create-comments.js` | `comments` | Comments with task/author FKs |
 | `05-create-audit-logs.js` | `audit_logs` | Append-only audit log table |
+| `06-add-task-compound-indexes.js`| `tasks` | Composite indexes for optimized listing queries |
 
 ```bash
 # Run migrations
@@ -141,6 +145,7 @@ npm run migrate -- --fresh
 | `JWT_ACCESS_EXPIRY` | `15m` | Access token expiry |
 | `JWT_REFRESH_EXPIRY` | `7d` | Refresh token expiry |
 | `DATABASE_URL` | — | Supabase PostgreSQL connection string (required) |
+| `REDIS_URL` | — | Redis connection string (optional; enables caching) |
 
 ---
 

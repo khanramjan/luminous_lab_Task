@@ -33,9 +33,15 @@ The API follows a **layered architecture** pattern with clear separation of conc
 └─────────────────┬───────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────┐
-│         SERVICE LAYER (Audit Service)                │
+│         SERVICE LAYER (Audit & Redis Services)       │
 │  Encapsulates cross-cutting concerns like audit      │
-│  trail logging. Called by controllers after changes.  │
+│  logging and caching. Calls Redis to bypass DB reads.│
+└─────────────────┬───────────────────────────────────┘
+                  │
+┌─────────────────▼───────────────────────────────────┐
+│       CACHE LAYER (Redis / Upstash)                  │
+│  Caches heavy reads (e.g., Audit logs) with 24h TTL. │
+│  Auto-reconnects with exponential backoff & jitter.  │
 └─────────────────┬───────────────────────────────────┘
                   │
 ┌─────────────────▼───────────────────────────────────┐
@@ -170,7 +176,11 @@ Every API request follows this flow:
 
 3. **AuditLog is Immutable**: Audit logs have no `updatedAt` field and are never soft-deleted. They are permanent, append-only records.
 
-4. **Supabase PostgreSQL**: Cloud-hosted, fully managed PostgreSQL database with SSL encryption. Connected via `DATABASE_URL` connection string. Tests use in-memory SQLite for speed and isolation — Sequelize abstracts the dialect differences.
+4. **Composite Database Indexes**: The `tasks` table includes compound indexes (e.g., `['assigneeId', 'status']`, `['projectId', 'status']`) to optimize the most common API queries without needing index merges.
+
+5. **Attribute Projection**: To optimize network throughput and payload parsing, the `GET /api/tasks` list endpoint explicitly excludes large text fields (like `description`), which are only fetched on specific task-detail requests.
+
+6. **Supabase PostgreSQL**: Cloud-hosted, fully managed PostgreSQL database with SSL encryption. Connected via `DATABASE_URL` connection string. Tests use in-memory SQLite for speed and isolation — Sequelize abstracts the dialect differences.
 
 ---
 
@@ -210,6 +220,12 @@ The audit trail captures **what changed, who changed it, and when**:
 - `ASSIGNEE_CHANGE` — Task reassignment
 - `TASK_CREATED` / `TASK_DELETED` — Task lifecycle events
 - `COMMENT_ADDED` / `COMMENT_UPDATED` / `COMMENT_DELETED` — Comment activity
+
+### Caching Strategy (Redis)
+Because audit logs are frequently read but rarely change compared to task queries, they are heavily cached:
+1. **Cache Read (Cache-Aside)**: The API first checks `audit:<taskId>` in Redis.
+2. **Cache Miss**: If empty, the DB is queried, and the result is cached for 24 hours.
+3. **Cache Invalidation**: Whenever `auditService.logChange` is called, the specific `audit:<taskId>` key is immediately deleted (`del()`) to ensure no stale data is ever presented. If Redis goes offline, the API elegantly downgrades to PostgreSQL reads.
 
 ---
 

@@ -6,6 +6,7 @@
  */
 
 const { AuditLog } = require('../models');
+const redisService = require('../config/redis');
 
 /**
  * Log a single field change on a task.
@@ -20,7 +21,7 @@ const { AuditLog } = require('../models');
  * @returns {Promise<object>} The created AuditLog entry
  */
 async function logChange({ taskId, action, field = null, oldValue = null, newValue = null, changedById }) {
-  return AuditLog.create({
+  const log = await AuditLog.create({
     taskId,
     action,
     field,
@@ -28,6 +29,14 @@ async function logChange({ taskId, action, field = null, oldValue = null, newVal
     newValue: newValue != null ? String(newValue) : null,
     changedById,
   });
+
+  if (redisService.isAvailable) {
+    redisService.client.del(`audit:${taskId}`).catch((err) => {
+      console.warn(`⚠️ [Redis] Cache invalidation failed for audit:${taskId}:`, err.message);
+    });
+  }
+
+  return log;
 }
 
 /**
@@ -48,7 +57,15 @@ async function logMultipleChanges(taskId, changes, changedById) {
     changedById,
   }));
 
-  return AuditLog.bulkCreate(entries);
+  const logs = await AuditLog.bulkCreate(entries);
+
+  if (redisService.isAvailable) {
+    redisService.client.del(`audit:${taskId}`).catch((err) => {
+      console.warn(`⚠️ [Redis] Cache invalidation failed for audit:${taskId}:`, err.message);
+    });
+  }
+
+  return logs;
 }
 
 /**
@@ -60,7 +77,18 @@ async function logMultipleChanges(taskId, changes, changedById) {
 async function getTaskAuditHistory(taskId) {
   const { User } = require('../models');
 
-  return AuditLog.findAll({
+  if (redisService.isAvailable) {
+    try {
+      const cached = await redisService.client.get(`audit:${taskId}`);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (err) {
+      console.warn(`⚠️ [Redis] Cache read failed for audit:${taskId}:`, err.message);
+    }
+  }
+
+  const results = await AuditLog.findAll({
     where: { taskId },
     include: [
       {
@@ -71,6 +99,16 @@ async function getTaskAuditHistory(taskId) {
     ],
     order: [['createdAt', 'DESC']],
   });
+
+  if (redisService.isAvailable) {
+    try {
+      await redisService.client.setEx(`audit:${taskId}`, 86400, JSON.stringify(results));
+    } catch (err) {
+      console.warn(`⚠️ [Redis] Cache write failed for audit:${taskId}:`, err.message);
+    }
+  }
+
+  return results;
 }
 
 module.exports = {

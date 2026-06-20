@@ -116,6 +116,7 @@ const listTasks = async (req, res, next) => {
 
     const { count, rows } = await Task.findAndCountAll({
       where,
+      attributes: { exclude: ['description'] },
       include: [
         { model: User, as: 'assignee', attributes: ['id', 'name', 'email'] },
         { model: Project, as: 'project', attributes: ['id', 'name'] },

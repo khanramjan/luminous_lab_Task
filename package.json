@@ -32,6 +32,7 @@
     "morgan": "^1.10.0",
     "pg": "^8.21.0",
     "pg-hstore": "^2.3.4",
+    "redis": "^6.0.0",
     "sequelize": "^6.37.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
